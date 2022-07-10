@@ -8,5 +8,8 @@
     "滚动容器"
   ],
   "author": "xieyuhang",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "miniprogram-api-typings": "^3.5.0"
+  }
 }
