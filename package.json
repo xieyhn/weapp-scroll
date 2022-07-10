@@ -1,0 +1,12 @@
+{
+  "name": "weapp-scroll",
+  "version": "1.0.0",
+  "description": "微信小程序带回弹效果的滚动容器，可适用在安卓、PC场景",
+  "main": "index.wxs",
+  "keywords": [
+    "微信小程序",
+    "滚动容器"
+  ],
+  "author": "xieyuhang",
+  "license": "MIT"
+}

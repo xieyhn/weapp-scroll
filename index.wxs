@@ -1,0 +1,255 @@
+var exports = module.exports
+/**
+ * @typedef {WechatMiniprogram.BoundingClientRectCallbackResult} Rect
+ * @typedef {{ x: number }} Pos
+ * @typedef {(t: number) => number} TimingFn
+ */
+
+var timings = {
+  v1: function (t) {
+    return 1 + --t * t * t * t * t
+  },
+  v2: function(t) {
+    return t * (2 - t)
+  },
+  v3: function(t) {
+    return 1 - --t * t * t * t
+  }
+}
+
+// 可配置选项
+var options = {
+  // 阻尼因子，超出边界后添加效果，值越小，阻力越大
+  dampingFactor: 0.3,
+  // 动量减速度
+  deceleration: 0.0015,
+  // 动量持续时间
+  momentumDuration: 1800,
+  // OutBounds
+  momentumOutBoundsDuration: 400,
+  // 回弹时长
+  bounceDuration: 800
+}
+
+var ownerInstance
+/**
+ * 最外层容器 BoundingClientRect
+ * @type {Rect}
+ */
+var containerRect
+/**
+ * 滑动容器实例，通过此实例设置 CSS 属性
+ */
+var slidingContainerInstance
+/**
+ * 滑动容器 BoundingClientRect
+ * @type {Rect}
+ */
+var slidingContainerRect
+
+var canScroll = false
+
+/**
+ * 最小的滚动距离，即滚动到最右侧（右滚动时，translateX 为负值）
+ * @type {number}
+ */
+var minTranslateX
+/**
+ * 最大的滚动距离，即初始状态
+ */
+var maxTranslateX = 0
+
+/**
+ * 滑动元素的位置信息，即滑动元素上的 CSS translateX 值
+ * 触摸动作需要以此基础进行滑动
+ * @type {Pos}
+ */
+var pos = { x: 0 }
+
+/**
+ * 记录触摸开始时，手指的位置
+ */
+var startTouch = { clientX: 0 }
+/**
+ * 触摸开啥时，滑动容器位置
+ * @type {Pos}
+ */
+var startPos = { x: 0 }
+/**
+ * 记录触摸开始时的时间戳
+ */
+var startTimeStamp = 0
+
+/**
+ * 记录触摸开始前需要清除的 effect
+ */
+var effect = null
+
+// clamp
+function clamp(min, max, val) {
+  return Math.max(min, Math.min(max, val))
+}
+
+/**
+ * @param {Pos} p 
+ * @return {Pos}
+ */
+function clonePos(p) {
+  return {
+    x: p.x,
+  }
+}
+
+/**
+ * 设置样式
+ * @param {Pos} p
+ */
+function setTranslate(p) {
+  slidingContainerInstance.setStyle({
+    transform: 'translateX(' + p.x + 'px)'
+  })
+  pos.x = p.x
+}
+
+/**
+ * @param {Pos} fromPos
+ * @param {Pos} toPos 
+ * @param {number} duration 持续时长，单位ms
+ * @param {TimingFn} timing
+ * @param {Function=} onComplete 动画完成的回调
+ */
+function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
+  var aborted = false
+  var completed = false
+  fromPos = clonePos(fromPos)
+  toPos = clonePos(toPos)
+
+  if (duration === 0) {
+    setTranslate(fromPos)
+    ownerInstance.requestAnimationFrame(function() {
+      completed = true
+      onComplete && onComplete()
+    })
+  } else {
+    var startTime = Date.now()
+    var dis = toPos.x - fromPos.x
+    var rAFHandler = function rAFHandler() {
+      if (aborted) return
+      var progress = timing(clamp(0, 1, (Date.now() - startTime) / duration))
+      setTranslate({ x: dis * progress + fromPos.x })
+      if (progress < 1) {
+        ownerInstance.requestAnimationFrame(rAFHandler)
+      } else {
+        completed = true
+        onComplete && onComplete()
+      }
+    }
+    ownerInstance.requestAnimationFrame(rAFHandler)
+  }
+
+  if (effect) effect()
+  effect = function abort() {
+    if (!completed && !aborted) {
+      aborted = true
+    }
+  }
+}
+
+/**
+ * 超出边界后就行位置修正，即回弹效果
+ * @param {Pos} pos
+ */
+function positionCorrection(pos) {
+  /** @type {Pos} */
+  var correctedPos = {
+    x: clamp(minTranslateX, maxTranslateX, pos.x)
+  }
+  if (correctedPos.x !== pos.x) {
+    moveFromTo(pos, correctedPos, options.bounceDuration, timings.v3)
+  }
+}
+
+/**
+ * @param {{ slidingContainerSelector: string }} options 
+ * @param _ 
+ * @param _ownerInstance
+ * @param instance 
+ */
+exports.setup = function setup(options, _, _ownerInstance, instance) {
+  ownerInstance = _ownerInstance
+  containerRect = instance.getBoundingClientRect()
+  slidingContainerInstance = ownerInstance.selectComponent(options.slidingContainerSelector)
+  slidingContainerRect = slidingContainerInstance.getBoundingClientRect()
+
+  if (slidingContainerRect.width > containerRect.width) {
+    canScroll = true
+    minTranslateX = (slidingContainerRect.width - containerRect.width) * -1
+  }
+}
+
+// touchstart
+exports.touchstart = function touchstart(event) {
+  startTouch.clientX = event.changedTouches[0].clientX
+  startPos.x = pos.x
+  startTimeStamp = event.timeStamp
+  if (effect) {
+    effect()
+    effect = null
+  }
+}
+
+// touchmove
+exports.touchmove = function touchmove(event) {
+  if (!canScroll) return
+  var deltaX = event.changedTouches[0].clientX - startTouch.clientX
+  var x = startPos.x + deltaX
+
+  if (x > maxTranslateX) {
+    // 手指右滑导致元素左侧超出，超出部分添加阻尼行为
+    x = maxTranslateX + options.dampingFactor * (x - maxTranslateX)
+  } else if (x < minTranslateX) {
+    // 手指左滑导致元素右侧超出，超出部分添加阻尼行为
+    x = minTranslateX + options.dampingFactor * (x - minTranslateX)
+  }
+  setTranslate({ x: x })
+}
+
+// touchend
+exports.touchend = function touchend(event) {
+  if (!canScroll) return
+  if (pos.x === startPos.x) return
+  /**
+   * @type {Pos}
+   */
+  var finalPos = { x: pos.x }
+  var duration = 0
+  /**
+   * @type {TimingFn}
+   */
+  var timing = timings.v1
+
+  if (finalPos.x === clamp(minTranslateX, maxTranslateX, finalPos.x)) {
+    // 在边界中，可以进行动量动画
+    var distance = Math.abs(pos.x - startPos.x)
+    var speed = distance / (event.timeStamp - startTimeStamp)
+    var dir = pos.x - startPos.x > 0 ? 1 : -1
+    duration = Math.min(options.momentumDuration, (speed * 2) / options.deceleration)
+    timing = timings.v1
+    finalPos.x += (Math.pow(speed, 2) / options.deceleration * dir)
+
+    if (finalPos.x > maxTranslateX || finalPos.x < minTranslateX) {
+      duration = options.momentumOutBoundsDuration
+      timing = timings.v2
+      var beyondDis = containerRect.width / 6
+      if (finalPos.x > maxTranslateX) {
+        finalPos.x = maxTranslateX + beyondDis
+      } else {
+        finalPos.x = minTranslateX + beyondDis * -1
+      }
+    }
+  }
+
+  moveFromTo(pos, finalPos, duration, timing, function() {
+    positionCorrection(finalPos)
+  })
+}
