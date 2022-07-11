@@ -20,6 +20,10 @@ var timings = {
 
 // 可配置选项
 var options = {
+  // 启用X方向滚动
+  enableScrollX: false,
+  // 启用Y方向滚动
+  enableScrollY: false,
   // 滑动容器选择器
   slidingContainerSelector: '.content',
   // 阻尼因子，超出边界后添加效果，值越小，阻力越大
@@ -200,14 +204,18 @@ function positionCorrection(pos) {
  */
 exports.setup = function setup(_options, _, _ownerInstance, instance) {
   // options
+  // slidingContainerSelector
   options.slidingContainerSelector = _options.slidingContainerSelector || options.slidingContainerSelector
+  // damping
   options.damping = _options.damping || options.damping
+  // deceleration
   options.deceleration = _options.deceleration || options.deceleration
+  // momentumDuration
   options.momentumDuration = _options.momentumDuration || options.momentumDuration
+  // momentumOutBoundsDuration
   options.momentumOutBoundsDuration = _options.momentumOutBoundsDuration || options.momentumOutBoundsDuration
+  // bounceDuration
   options.bounceDuration = _options.bounceDuration || options.bounceDuration
-
-  console.log(JSON.stringify(options))
 
   ownerInstance = _ownerInstance
   containerRect = instance.getBoundingClientRect()
@@ -215,11 +223,13 @@ exports.setup = function setup(_options, _, _ownerInstance, instance) {
   slidingContainerRect = slidingContainerInstance.getBoundingClientRect()
 
   if (slidingContainerRect.width > containerRect.width) {
-    canScrollX = true
+    // canScrollX
+    canScrollX = typeof _options.enableScrollX === 'undefined' ? true : _options.enableScrollX
     minTranslateX = (slidingContainerRect.width - containerRect.width) * -1
   }
   if (slidingContainerRect.height > containerRect.height) {
-    canScrollY = true
+    // canScrollY
+    canScrollY = typeof _options.enableScrollY === 'undefined' ? true : _options.enableScrollY
     minTranslateY = (slidingContainerRect.height - containerRect.height) * -1
   }
 }
