@@ -5,6 +5,9 @@ Weapp Scroll 是基于 [WXS](https://developers.weixin.qq.com/miniprogram/dev/re
 
 滚动原理参考 [滚动原理](https://better-scroll.github.io/docs/zh-CN/guide/#%E6%BB%9A%E5%8A%A8%E5%8E%9F%E7%90%86)。
 
+## 效果预览
+<img width="30%" src="./preview.gif" />
+
 ## 使用
 1. 拷贝 `example/weapp-scroll.wxs` 文件至项目中
 2. 在需要使用的页面或组件使用 `<wxs></wxs>` 标签引入 `weapp-scroll.wxs`
