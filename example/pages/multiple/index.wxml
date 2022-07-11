@@ -1,0 +1,4 @@
+<view class="label">页面中多个滚动容器需要用组件隔离</view>
+
+<comp1 />
+<comp2 />

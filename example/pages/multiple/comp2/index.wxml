@@ -1,0 +1,15 @@
+<wxs src="../../../weapp-scroll.wxs" module="scroll" />
+
+<view 
+  class="container"
+  change:_="{{ scroll.setup }}"
+  _="{{ { slidingContainerSelector: '.content' } }}"
+  bind:touchstart="{{ scroll.touchstart }}"
+  bind:touchmove="{{ scroll.touchmove }}"
+  bind:touchend="{{ scroll.touchend }}"
+  bind:touchcancel="{{ scroll.touchend }}"
+>
+  <view class="content">
+    <view wx:for="{{ 10 }}" wx:key="index" class="item">{{ item }}</view>
+  </view>
+</view>

@@ -1,0 +1,20 @@
+<wxs src="../../weapp-scroll.wxs" module="scroll"></wxs>
+
+<view class="label">横向滚动</view>
+<view 
+  class="container"
+  change:_="{{ scroll.setup }}"
+  _="{{ scrollOptions }}"
+  bind:touchstart="{{ scroll.touchstart }}"
+  bind:touchmove="{{ scroll.touchmove }}"
+  bind:touchend="{{ scroll.touchend }}"
+  bind:touchcancel="{{ scroll.touchend }}"
+>
+  <view class="content">
+    <view wx:for="{{ 10 }}" wx:key="index" class="item">{{ item }}</view>
+  </view>
+</view>
+
+<button class="button" type="primary" bind:tap="toVertical">竖向滚动</button>
+<button class="button" type="primary" bind:tap="toDynamic">动态添加元素</button>
+<button class="button" type="primary" bind:tap="toMultiple">页面中多个容器</button>

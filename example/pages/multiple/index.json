@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "comp1": "./comp1/index",
+    "comp2": "./comp2/index"
+  },
+  "disableScroll": true
+}
