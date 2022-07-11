@@ -1,7 +1,8 @@
+// @ts-check
 var exports = module.exports
 /**
  * @typedef {WechatMiniprogram.BoundingClientRectCallbackResult} Rect
- * @typedef {{ x: number }} Pos
+ * @typedef {{ x: number, y: number }} Pos
  * @typedef {(t: number) => number} TimingFn
  */
 
@@ -19,13 +20,16 @@ var timings = {
 
 // 可配置选项
 var options = {
+  // 滑动容器选择器
+  slidingContainerSelector: '.content',
   // 阻尼因子，超出边界后添加效果，值越小，阻力越大
-  dampingFactor: 0.3,
+  damping: 0.3,
   // 动量减速度
   deceleration: 0.0015,
-  // 动量持续时间
+  // 动量动画默认的持续时间
   momentumDuration: 1800,
   // OutBounds
+  // 加上动量若超出容器后，动量动画持续时间
   momentumOutBoundsDuration: 400,
   // 回弹时长
   bounceDuration: 800
@@ -46,76 +50,82 @@ var slidingContainerInstance
  * @type {Rect}
  */
 var slidingContainerRect
-
-var canScroll = false
-
 /**
- * 最小的滚动距离，即滚动到最右侧（右滚动时，translateX 为负值）
+ * 标记 X 方向是否能滚动
+ */
+var canScrollX = false
+/**
+ * 标记 Y 方向是否能滚动
+ */
+var canScrollY = false
+/**
+ * X方向的最小、最大滚动距离。如 -200 至 0（手势往右时，元素左移，translateX 为负值）
  * @type {number}
  */
 var minTranslateX
-/**
- * 最大的滚动距离，即初始状态
- */
 var maxTranslateX = 0
-
 /**
- * 滑动元素的位置信息，即滑动元素上的 CSS translateX 值
- * 触摸动作需要以此基础进行滑动
+ * Y方向的最小，最大滚动距离。如 -200 至 0（手势往下时，元素上移，translateY 为负值）
+ */
+var minTranslateY
+var maxTranslateY = 0
+/**
+ * 滑动元素的位置信息，即滑动元素上的 CSS translate 值
+ * 触摸动作需要以此为基础进行变换
  * @type {Pos}
  */
-var pos = { x: 0 }
-
+var pos = { x: 0, y: 0 }
 /**
  * 记录触摸开始时，手指的位置
  */
-var startTouch = { clientX: 0 }
+var startTouch = { clientX: 0, clientY: 0 }
 /**
- * 触摸开啥时，滑动容器位置
+ * 记录每次触摸开啥时，滑动容器位置
  * @type {Pos}
  */
-var startPos = { x: 0 }
+var startPos = { x: 0, y: 0 }
 /**
  * 记录触摸开始时的时间戳
  */
 var startTimeStamp = 0
-
 /**
  * 记录触摸开始前需要清除的 effect
  */
 var effect = null
 
-// clamp
+// Clamp
 function clamp(min, max, val) {
   return Math.max(min, Math.min(max, val))
 }
 
 /**
- * @param {Pos} p 
+ * @param {Pos} p0
  * @return {Pos}
  */
-function clonePos(p) {
+function clonePos(p0) {
   return {
-    x: p.x,
+    x: p0.x,
+    y: p0.y
   }
 }
 
 /**
  * 设置样式
- * @param {Pos} p
+ * @param {Pos} pos0
  */
-function setTranslate(p) {
+function setTranslate(pos0) {
   slidingContainerInstance.setStyle({
-    transform: 'translateX(' + p.x + 'px)'
+    transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
   })
-  pos.x = p.x
+  pos.x = pos0.x
+  pos.y = pos0.y
 }
 
 /**
  * @param {Pos} fromPos
  * @param {Pos} toPos 
  * @param {number} duration 持续时长，单位ms
- * @param {TimingFn} timing
+ * @param {{ x: TimingFn, y: TimingFn }} timing
  * @param {Function=} onComplete 动画完成的回调
  */
 function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
@@ -132,12 +142,24 @@ function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
     })
   } else {
     var startTime = Date.now()
-    var dis = toPos.x - fromPos.x
+    var disX = toPos.x - fromPos.x
+    var disY = toPos.y - fromPos.y
+    var progressX = 1
+    var progressY = 1
     var rAFHandler = function rAFHandler() {
       if (aborted) return
-      var progress = timing(clamp(0, 1, (Date.now() - startTime) / duration))
-      setTranslate({ x: dis * progress + fromPos.x })
-      if (progress < 1) {
+      var curPos = clonePos(fromPos)
+      if (canScrollX) {
+        progressX = timing.x(clamp(0, 1, (Date.now() - startTime) / duration))
+        curPos.x = disX * progressX + fromPos.x
+      }
+      if (canScrollY) {
+        progressY = timing.y(clamp(0, 1, (Date.now() - startTime) / duration))
+        curPos.y = disY * progressY + fromPos.y
+      }
+      setTranslate(curPos)
+      
+      if (progressX < 1 || progressY < 1) {
         ownerInstance.requestAnimationFrame(rAFHandler)
       } else {
         completed = true
@@ -162,36 +184,56 @@ function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
 function positionCorrection(pos) {
   /** @type {Pos} */
   var correctedPos = {
-    x: clamp(minTranslateX, maxTranslateX, pos.x)
+    x: clamp(minTranslateX, maxTranslateX, pos.x),
+    y: clamp(minTranslateY, maxTranslateY, pos.y)
   }
-  if (correctedPos.x !== pos.x) {
-    moveFromTo(pos, correctedPos, options.bounceDuration, timings.v3)
+  if (correctedPos.x !== pos.x || correctedPos.y !== pos.y) {
+    moveFromTo(pos, correctedPos, options.bounceDuration, { x: timings.v3, y: timings.v3 })
   }
 }
 
 /**
- * @param {{ slidingContainerSelector: string }} options 
+ * @param {typeof options} _options 
  * @param _ 
  * @param _ownerInstance
  * @param instance 
  */
-exports.setup = function setup(options, _, _ownerInstance, instance) {
+exports.setup = function setup(_options, _, _ownerInstance, instance) {
+  // options
+  options.slidingContainerSelector = _options.slidingContainerSelector || options.slidingContainerSelector
+  options.damping = _options.damping || options.damping
+  options.deceleration = _options.deceleration || options.deceleration
+  options.momentumDuration = _options.momentumDuration || options.momentumDuration
+  options.momentumOutBoundsDuration = _options.momentumOutBoundsDuration || options.momentumOutBoundsDuration
+  options.bounceDuration = _options.bounceDuration || options.bounceDuration
+
+  console.log(JSON.stringify(options))
+
   ownerInstance = _ownerInstance
   containerRect = instance.getBoundingClientRect()
   slidingContainerInstance = ownerInstance.selectComponent(options.slidingContainerSelector)
   slidingContainerRect = slidingContainerInstance.getBoundingClientRect()
 
   if (slidingContainerRect.width > containerRect.width) {
-    canScroll = true
+    canScrollX = true
     minTranslateX = (slidingContainerRect.width - containerRect.width) * -1
+  }
+  if (slidingContainerRect.height > containerRect.height) {
+    canScrollY = true
+    minTranslateY = (slidingContainerRect.height - containerRect.height) * -1
   }
 }
 
 // touchstart
 exports.touchstart = function touchstart(event) {
   startTouch.clientX = event.changedTouches[0].clientX
+  startTouch.clientY = event.changedTouches[0].clientY
+
   startPos.x = pos.x
+  startPos.y = pos.y
+
   startTimeStamp = event.timeStamp
+
   if (effect) {
     effect()
     effect = null
@@ -200,46 +242,82 @@ exports.touchstart = function touchstart(event) {
 
 // touchmove
 exports.touchmove = function touchmove(event) {
-  if (!canScroll) return
   var deltaX = event.changedTouches[0].clientX - startTouch.clientX
-  var x = startPos.x + deltaX
+  var deltaY = event.changedTouches[0].clientY - startTouch.clientY
 
-  if (x > maxTranslateX) {
-    // 手指右滑导致元素左侧超出，超出部分添加阻尼行为
-    x = maxTranslateX + options.dampingFactor * (x - maxTranslateX)
-  } else if (x < minTranslateX) {
-    // 手指左滑导致元素右侧超出，超出部分添加阻尼行为
-    x = minTranslateX + options.dampingFactor * (x - minTranslateX)
+  var x = startPos.x
+  var y = startPos.y
+
+  if (canScrollX) {
+    x += deltaX
+
+    if (x > maxTranslateX) {
+      // 手指右滑导致元素左侧超出，超出部分添加阻尼行为
+      x = maxTranslateX + options.damping * (x - maxTranslateX)
+    } else if (x < minTranslateX) {
+      // 手指左滑导致元素右侧超出，超出部分添加阻尼行为
+      x = minTranslateX + options.damping * (x - minTranslateX)
+    }
   }
-  setTranslate({ x: x })
+
+  if (canScrollY) {
+    y += deltaY
+
+    if (y > maxTranslateY) {
+      // 手指下滑导致元素顶部超出，超出部分添加阻尼行为
+      y = maxTranslateY + options.damping * (y - maxTranslateY)
+    } else if (y < minTranslateY) {
+      // 手指上滑导致元素底部超出，超出部分添加阻尼行为
+      y = minTranslateY + options.damping * (y - minTranslateY)
+    }
+  }
+
+  setTranslate({ x: x, y: y })
 }
 
 // touchend
 exports.touchend = function touchend(event) {
-  if (!canScroll) return
-  if (pos.x === startPos.x) return
-  /**
-   * @type {Pos}
-   */
-  var finalPos = { x: pos.x }
-  var duration = 0
-  /**
-   * @type {TimingFn}
-   */
-  var timing = timings.v1
+  if (pos.x === startPos.x && pos.y === startPos.y) return
 
-  if (finalPos.x === clamp(minTranslateX, maxTranslateX, finalPos.x)) {
+  var eventDuration = event.timeStamp - startTimeStamp
+  /** @type {Pos} */
+  var finalPos = { x: pos.x, y: pos.y }
+
+  // 动量动画持续时间
+  var durationX = 0
+  var durationY = 0
+
+  // 动量动画函数
+  var timingX = timings.v1
+  var timingY = timings.v1
+
+  /**
+   * @param {number} start 
+   * @param {number} end 
+   */
+  var calculateMomentum = function calculateMomentum(start, end) {
+    var distance = Math.abs(start - end)
+    var speed = distance / eventDuration
+    var dir = end - start > 0 ? 1 : -1
+    var duration = Math.min(options.momentumDuration, (speed * 2) / options.deceleration)
+    var delta = Math.pow(speed, 2) / options.deceleration * dir
+
+    return {
+      duration: duration,
+      delta: delta
+    }
+  }
+
+  if (canScrollX && finalPos.x === clamp(minTranslateX, maxTranslateX, finalPos.x)) {
     // 在边界中，可以进行动量动画
-    var distance = Math.abs(pos.x - startPos.x)
-    var speed = distance / (event.timeStamp - startTimeStamp)
-    var dir = pos.x - startPos.x > 0 ? 1 : -1
-    duration = Math.min(options.momentumDuration, (speed * 2) / options.deceleration)
-    timing = timings.v1
-    finalPos.x += (Math.pow(speed, 2) / options.deceleration * dir)
+    var result = calculateMomentum(startPos.x, pos.x)
+
+    durationX = result.duration
+    finalPos.x += result.delta
 
     if (finalPos.x > maxTranslateX || finalPos.x < minTranslateX) {
-      duration = options.momentumOutBoundsDuration
-      timing = timings.v2
+      durationX = options.momentumOutBoundsDuration
+      timingX = timings.v2
       var beyondDis = containerRect.width / 6
       if (finalPos.x > maxTranslateX) {
         finalPos.x = maxTranslateX + beyondDis
@@ -249,7 +327,26 @@ exports.touchend = function touchend(event) {
     }
   }
 
-  moveFromTo(pos, finalPos, duration, timing, function() {
+  if (canScrollY && finalPos.y === clamp(minTranslateY, maxTranslateY, finalPos.y)) {
+    // 在边界中，可以进行动量动画
+    var result = calculateMomentum(startPos.y, pos.y)
+
+    durationY = result.duration
+    finalPos.y += result.delta
+
+    if (finalPos.y > maxTranslateY || finalPos.y < minTranslateY) {
+      durationY = options.momentumOutBoundsDuration
+      timingY = timings.v2
+      var beyondDis = containerRect.height / 6
+      if (finalPos.y > maxTranslateY) {
+        finalPos.y = maxTranslateY + beyondDis
+      } else {
+        finalPos.y = minTranslateY + beyondDis * -1
+      }
+    }
+  }
+
+  moveFromTo(pos, finalPos, Math.max(durationX, durationY), { x: timingX, y: timingY }, function() {
     positionCorrection(finalPos)
   })
 }
