@@ -5,8 +5,10 @@ Weapp Scroll 是基于 [WXS](https://developers.weixin.qq.com/miniprogram/dev/re
 
 滚动原理参考 [滚动原理](https://better-scroll.github.io/docs/zh-CN/guide/#%E6%BB%9A%E5%8A%A8%E5%8E%9F%E7%90%86)。
 
+[微信小程序中基于WXS实现回弹的平滑滚动容器](https://juejin.cn/post/7119278260315242503)
+
 ## 效果预览
-<img width="30%" src="./preview.gif" />
+<img width="50%" src="./preview.gif" />
 
 ## 使用
 1. 拷贝 `example/weapp-scroll.wxs` 文件至项目中
