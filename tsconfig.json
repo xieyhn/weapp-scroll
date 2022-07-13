@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES3",
+    "module": "ESNext",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "removeComments": true,
+    "types": [
+      "miniprogram-api-typings"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}

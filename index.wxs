@@ -1,4 +1,0 @@
-/**
- * 直接使用 example/weapp-scroll.wxs 即可
- */
-module.exports = require('./example/weapp-scroll.wxs')
