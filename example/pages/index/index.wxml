@@ -1,14 +1,25 @@
-<wxs src="../../weapp-scroll.wxs" module="scroll"></wxs>
+<wxs src="../../weapp-scroll.wxs" module="weappScroll"></wxs>
+
+<wxs module="m">
+  var weappScroll = require('../../weapp-scroll.wxs')
+
+  var cancel = weappScroll.onScroll(function(data) {
+    console.log('x:', data.x, 'y:', data.y)
+  })
+
+  // 取消监听
+  // cancel()
+</wxs>
 
 <view class="label">横向滚动</view>
 <view 
   class="container"
-  change:_="{{ scroll.setup }}"
-  _="{{ scrollOptions }}"
-  bind:touchstart="{{ scroll.touchstart }}"
-  bind:touchmove="{{ scroll.touchmove }}"
-  bind:touchend="{{ scroll.touchend }}"
-  bind:touchcancel="{{ scroll.touchend }}"
+  change:_="{{ weappScroll.setup }}"
+  _="{{ weappsScrollOptions }}"
+  bind:touchstart="{{ weappScroll.touchstart }}"
+  bind:touchmove="{{ weappScroll.touchmove }}"
+  bind:touchend="{{ weappScroll.touchend }}"
+  bind:touchcancel="{{ weappScroll.touchend }}"
 >
   <view class="content">
     <view wx:for="{{ 10 }}" wx:key="index" class="item">{{ item }}</view>

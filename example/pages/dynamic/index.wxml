@@ -1,14 +1,14 @@
-<wxs src="../../weapp-scroll.wxs" module="scroll"></wxs>
+<wxs src="../../weapp-scroll.wxs" module="weappScroll"></wxs>
 
 <view class="label">动态添加元素后需要手动触发更新</view>
 <view 
   class="container"
-  change:_="{{ scroll.setup }}"
-  _="{{ scrollOptions }}"
-  bind:touchstart="{{ scroll.touchstart }}"
-  bind:touchmove="{{ scroll.touchmove }}"
-  bind:touchend="{{ scroll.touchend }}"
-  bind:touchcancel="{{ scroll.touchend }}"
+  change:_="{{ weappScroll.setup }}"
+  _="{{ weappScrollOptions }}"
+  bind:touchstart="{{ weappScroll.touchstart }}"
+  bind:touchmove="{{ weappScroll.touchmove }}"
+  bind:touchend="{{ weappScroll.touchend }}"
+  bind:touchcancel="{{ weappScroll.touchend }}"
 >
   <view class="content">
     <view wx:for="{{ count }}" wx:key="index" class="item">{{ item }}</view>

@@ -4,13 +4,18 @@ import options, { resolveOptions,  Options } from './options'
 
 type Rect = WechatMiniprogram.BoundingClientRectCallbackResult
 
-interface Pos {
+export interface Pos {
   x: number
   y: number
 }
 
-interface Callback {
-  (): void
+interface ScrollCallback {
+  (data: {
+    x: number
+    y: number
+    maxScrollDistanceX: number
+    maxScrollDistanceY: number
+  }): void
 }
 
 var ownerInstance: ComponentDescriptor
@@ -66,12 +71,10 @@ var startTimeStamp = 0
 */
 var effect: (() => void) | null = null
 
-function clonePos(p0: Pos): Pos {
-  return {
-    x: p0.x,
-    y: p0.y
-  }
-}
+/**
+ * callbacks
+ */
+var onScrollCallbacks: ScrollCallback[] = []
 
 /**
  * 设置样式
@@ -82,6 +85,12 @@ function clonePos(p0: Pos): Pos {
   })
   pos.x = pos0.x
   pos.y = pos0.y
+  onScrollCallbacks.forEach(cb => cb({
+    x: pos.x,
+    y: pos.y,
+    maxScrollDistanceX: minTranslateX * -1,
+    maxScrollDistanceY: minTranslateY * -1
+  }))
 }
 
 /**
@@ -99,12 +108,12 @@ function clonePos(p0: Pos): Pos {
     x: EasingFunction,
     y: EasingFunction
   },
-  onComplete?: Callback
+  onComplete?: () => void
 ) {
   var aborted = false
   var completed = false
-  fromPos = clonePos(fromPos)
-  toPos = clonePos(toPos)
+  fromPos = Utils.clonePos(fromPos)
+  toPos = Utils.clonePos(toPos)
 
   if (duration === 0) {
     setTranslate(fromPos)
@@ -120,7 +129,7 @@ function clonePos(p0: Pos): Pos {
     var progressY = 1
     var rAFHandler = function rAFHandler() {
       if (aborted) return
-      var curPos = clonePos(fromPos)
+      var curPos = Utils.clonePos(fromPos)
       if (canScrollX) {
         progressX = timing.x(Utils.clamp(0, 1, (Date.now() - startTime) / duration))
         curPos.x = disX * progressX + fromPos.x
@@ -302,4 +311,15 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
   moveFromTo(pos, finalPos, Math.max(durationX, durationY), { x: timingX, y: timingY }, function() {
     positionCorrection(finalPos)
   })
+}
+
+export function onScroll(callback: ScrollCallback) {
+  onScrollCallbacks.push(callback)
+
+  return function cancel() {
+    var idx = onScrollCallbacks.indexOf(callback)
+    if (idx !== 1) {
+      onScrollCallbacks.splice(idx, 1)
+    }
+  }
 }
