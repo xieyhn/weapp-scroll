@@ -14,7 +14,8 @@ export default defineConfig({
     copy({
       targets: [
         { src: 'dist/index.wxs', dest: 'example/', rename: 'weapp-scroll.wxs' }
-      ]
+      ],
+      hook: 'writeBundle'
     })
   ]
 })
