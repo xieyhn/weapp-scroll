@@ -80,6 +80,8 @@ var onScrollCallbacks: ScrollCallback[] = []
  * 设置样式
  */
  function setTranslate(pos0: Pos) {
+  if (pos0.x === pos.x && pos0.y === pos.y) return
+  
   slidingContainerInstance.setStyle({
     transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
   })
@@ -116,7 +118,7 @@ var onScrollCallbacks: ScrollCallback[] = []
   toPos = Utils.clonePos(toPos)
 
   if (duration === 0) {
-    setTranslate(fromPos)
+    setTranslate(toPos)
     ownerInstance.requestAnimationFrame(function() {
       completed = true
       onComplete && onComplete()
@@ -166,7 +168,7 @@ var onScrollCallbacks: ScrollCallback[] = []
     x: Utils.clamp(minTranslateX, maxTranslateX, pos.x),
     y: Utils.clamp(minTranslateY, maxTranslateY, pos.y)
   }
-  if (correctedPos.x !== pos.x || correctedPos.y !== pos.y) {
+  if (!Utils.isSamePos(correctedPos, pos)) {
     moveFromTo(pos, correctedPos, options.bounceDuration, { x: Easing.v3, y: Easing.v3 })
   }
 }
@@ -244,10 +246,23 @@ export function touchmove(event: WechatMiniprogram.TouchEvent) {
 
 // touchend
 export function touchend(event: WechatMiniprogram.TouchEvent) {
-  if (pos.x === startPos.x && pos.y === startPos.y) return
+  var minmovingDistance = 15
+  var maxMovingDuration = 300
+  var finalPos: Pos = { x: pos.x, y: pos.y }
+  
+  // 未移动
+  if (Utils.isSamePos(finalPos, startPos)) return
 
   var eventDuration = event.timeStamp - startTimeStamp
-  var finalPos: Pos = { x: pos.x, y: pos.y }
+
+  if (eventDuration > maxMovingDuration) {
+    positionCorrection(finalPos)
+    return
+  }
+
+  // 移动距离
+  var distanceX = Math.abs(finalPos.x - startPos.x)
+  var distanceY = Math.abs(finalPos.y - startPos.y)
 
   // 动量动画持续时间
   var durationX = 0
@@ -257,8 +272,7 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
   var timingX = Easing.v1
   var timingY = Easing.v1
 
-  var calculateMomentum = function calculateMomentum(start: number, end: number) {
-    var distance = Math.abs(start - end)
+  var calculateMomentum = function calculateMomentum(start: number, end: number, distance: number) {
     var speed = distance / eventDuration
     var dir = end - start > 0 ? 1 : -1
     var duration = Math.min(options.momentumDuration, (speed * 2) / options.deceleration)
@@ -270,9 +284,13 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
     }
   }
 
-  if (canScrollX && finalPos.x === Utils.clamp(minTranslateX, maxTranslateX, finalPos.x)) {
-    // 在边界中，可以进行动量动画
-    var result = calculateMomentum(startPos.x, pos.x)
+  if (
+    canScrollX 
+    && distanceX > minmovingDistance
+    && finalPos.x <= maxTranslateX
+    && finalPos.x >= minTranslateX
+  ) {
+    var result = calculateMomentum(startPos.x, pos.x, distanceX)
 
     durationX = result.duration
     finalPos.x += result.delta
@@ -289,9 +307,14 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
     }
   }
 
-  if (canScrollY && finalPos.y === Utils.clamp(minTranslateY, maxTranslateY, finalPos.y)) {
+  if (
+    canScrollY 
+    && distanceY > minmovingDistance
+    && finalPos.y >= minTranslateY
+    && finalPos.y <= maxTranslateY
+  ) {
     // 在边界中，可以进行动量动画
-    var result = calculateMomentum(startPos.y, pos.y)
+    var result = calculateMomentum(startPos.y, pos.y, distanceY)
 
     durationY = result.duration
     finalPos.y += result.delta

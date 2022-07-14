@@ -1,10 +1,11 @@
 {
   "name": "weapp-scroll",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "微信小程序带回弹效果的滚动容器，可适用在安卓、PC场景",
   "main": "dist/index.wxs",
   "miniprogram": "dist",
   "scripts": {
+    "dev": "rollup -c rollup.config.js --watch",
     "build": "rollup -c rollup.config.js"
   },
   "keywords": [
