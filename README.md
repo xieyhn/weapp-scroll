@@ -11,23 +11,23 @@ Weapp Scroll 是基于 [WXS](https://developers.weixin.qq.com/miniprogram/dev/re
 <img width="50%" src="./preview.gif" />
 
 ## 使用
-1. 拷贝 `example/weapp-scroll.wxs` 文件至项目中
+1. 拷贝 `dist/index.wxs` 文件至项目中并重命名为 `weapp-scroll.wxs`
 2. 在需要使用的页面或组件使用 `<wxs></wxs>` 标签引入 `weapp-scroll.wxs`
 
-下面是创建横向滚动容器的简单的示例：
+下面是创建横向滚动的简单的示例：
 
 ```html
 <!-- 注意修改实际的文件路径 -->
-<wxs src="./weapp-scroll.wxs" module="scroll"></wxs>
+<wxs src="./weapp-scroll.wxs" module="weappScroll"></wxs>
 
 <view 
   style="width: 100vw;"
-  change:_="{{ scroll.setup }}"
+  change:_="{{ weappScroll.setup }}"
   _="{{ { slidingContainerSelector: '.content' } }}"
-  bind:touchstart="{{ scroll.touchstart }}"
-  bind:touchmove="{{ scroll.touchmove }}"
-  bind:touchend="{{ scroll.touchend }}"
-  bind:touchcancel="{{ scroll.touchend }}"
+  bind:touchstart="{{ weappScroll.touchstart }}"
+  bind:touchmove="{{ weappScroll.touchmove }}"
+  bind:touchend="{{ weappScroll.touchend }}"
+  bind:touchcancel="{{ weappScroll.touchend }}"
 >
   <view class="content" style="display: inline-block; white-space: nowrap;">
     <view wx:for="{{ 10 }}" wx:key="index" style="width: 200rpx; height: 300rpx; border: 1px solid; display: inline-block;">{{ item }}</view>
@@ -53,3 +53,35 @@ Weapp Scroll 是基于 [WXS](https://developers.weixin.qq.com/miniprogram/dev/re
 | damping                  | 0.3                                               | 滑动超出边界后，超出边界的阻尼系数，取值在 [0, 1]，值约小，阻力越大 |
 | bounceDuration           | 800                                               | 滑动超出边界后进行反弹，设置反弹动画的持续时间               |
 
+## 事件
+### onScroll
+在滑动容器滑动时触发
+```ts
+interface ScrollCallback {
+  (data: {
+    // 滑动容器的 translateX
+    x: number
+    // 滑动容器的 translateY
+    y: number
+    // 滑动容器在 X 方向的最大滑动距离，正值
+    maxScrollDistanceX: number
+    // 滑动容器在 Y 方向的最大滑动距离，正值
+    maxScrollDistanceY: number
+  }): void
+}
+
+function onScroll(callback: ScrollCallback): () => void
+```
+
+示例
+```js
+// 在页面中任意引入到的 *.wxs 文件
+var weappScroll = require('./weapp-scroll.wxs')
+
+var cancel = weappScroll.onScroll(function (data) {
+  console.log(data.x)
+})
+
+// 取消监听
+cancel()
+```

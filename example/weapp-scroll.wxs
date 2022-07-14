@@ -18,6 +18,12 @@ var Utils = {
     },
     clamp: function (min, max, val) {
         return Math.max(min, Math.min(max, val));
+    },
+    clonePos: function (pos) {
+        return {
+            x: pos.x,
+            y: pos.y
+        };
     }
 };
 
@@ -57,24 +63,26 @@ var startTouch = { clientX: 0, clientY: 0 };
 var startPos = { x: 0, y: 0 };
 var startTimeStamp = 0;
 var effect = null;
-function clonePos(p0) {
-    return {
-        x: p0.x,
-        y: p0.y
-    };
-}
+var onScrollCallbacks = [];
 function setTranslate(pos0) {
     slidingContainerInstance.setStyle({
         transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
     });
     pos.x = pos0.x;
     pos.y = pos0.y;
+    onScrollCallbacks.forEach(function (cb) { return cb({
+        x: pos.x,
+        y: pos.y,
+        ownerInstance: ownerInstance,
+        maxScrollDistanceX: minTranslateX * -1,
+        maxScrollDistanceY: minTranslateY * -1
+    }); });
 }
 function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
     var aborted = false;
     var completed = false;
-    fromPos = clonePos(fromPos);
-    toPos = clonePos(toPos);
+    fromPos = Utils.clonePos(fromPos);
+    toPos = Utils.clonePos(toPos);
     if (duration === 0) {
         setTranslate(fromPos);
         ownerInstance.requestAnimationFrame(function () {
@@ -91,7 +99,7 @@ function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
         var rAFHandler = function rAFHandler() {
             if (aborted)
                 return;
-            var curPos = clonePos(fromPos);
+            var curPos = Utils.clonePos(fromPos);
             if (canScrollX) {
                 progressX = timing.x(Utils.clamp(0, 1, (Date.now() - startTime) / duration));
                 curPos.x = disX * progressX + fromPos.x;
@@ -235,12 +243,22 @@ function touchend(event) {
         positionCorrection(finalPos);
     });
 }
+function onScroll(callback) {
+    onScrollCallbacks.push(callback);
+    return function cancel() {
+        var idx = onScrollCallbacks.indexOf(callback);
+        if (idx !== 1) {
+            onScrollCallbacks.splice(idx, 1);
+        }
+    };
+}
 
 var index = {
     setup: setup,
     touchstart: touchstart,
     touchmove: touchmove,
-    touchend: touchend
+    touchend: touchend,
+    onScroll: onScroll
 };
 
 module.exports = index;
