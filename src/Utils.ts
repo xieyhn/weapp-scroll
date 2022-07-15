@@ -14,6 +14,10 @@ var Utils = {
       x: pos.x,
       y: pos.y
     }
+  },
+
+  isSamePos(p1: Pos, p2: Pos) {
+    return p1.x === p2.x && p1.y === p2.y
   }
 }
 
