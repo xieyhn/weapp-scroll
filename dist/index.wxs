@@ -192,7 +192,7 @@ function touchmove(event) {
     setTranslate({ x: x, y: y });
 }
 function touchend(event) {
-    var minmovingDistance = 15;
+    var minMovingDistance = 15;
     var maxMovingDuration = 300;
     var finalPos = { x: pos.x, y: pos.y };
     if (Utils.isSamePos(finalPos, startPos))
@@ -219,7 +219,7 @@ function touchend(event) {
         };
     };
     if (canScrollX
-        && distanceX > minmovingDistance
+        && distanceX > minMovingDistance
         && finalPos.x <= maxTranslateX
         && finalPos.x >= minTranslateX) {
         var result = calculateMomentum(startPos.x, pos.x, distanceX);
@@ -238,7 +238,7 @@ function touchend(event) {
         }
     }
     if (canScrollY
-        && distanceY > minmovingDistance
+        && distanceY > minMovingDistance
         && finalPos.y >= minTranslateY
         && finalPos.y <= maxTranslateY) {
         var result = calculateMomentum(startPos.y, pos.y, distanceY);

@@ -246,7 +246,7 @@ export function touchmove(event: WechatMiniprogram.TouchEvent) {
 
 // touchend
 export function touchend(event: WechatMiniprogram.TouchEvent) {
-  var minmovingDistance = 15
+  var minMovingDistance = 15
   var maxMovingDuration = 300
   var finalPos: Pos = { x: pos.x, y: pos.y }
   
@@ -286,7 +286,7 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
 
   if (
     canScrollX 
-    && distanceX > minmovingDistance
+    && distanceX > minMovingDistance
     && finalPos.x <= maxTranslateX
     && finalPos.x >= minTranslateX
   ) {
@@ -309,7 +309,7 @@ export function touchend(event: WechatMiniprogram.TouchEvent) {
 
   if (
     canScrollY 
-    && distanceY > minmovingDistance
+    && distanceY > minMovingDistance
     && finalPos.y >= minTranslateY
     && finalPos.y <= maxTranslateY
   ) {
