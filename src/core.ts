@@ -80,7 +80,7 @@ var onScrollCallbacks: ScrollCallback[] = []
  * 设置样式
  */
  function setTranslate(pos0: Pos) {
-  if (pos0.x === pos.x && pos0.y === pos.y) return
+  if (Utils.isSamePos(pos0, pos)) return
   
   slidingContainerInstance.setStyle({
     transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
@@ -241,7 +241,7 @@ export function touchmove(event: WechatMiniprogram.TouchEvent) {
     }
   }
 
-  setTranslate({ x: x, y: y })
+  setTranslate({ x, y })
 }
 
 // touchend

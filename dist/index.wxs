@@ -68,7 +68,7 @@ var startTimeStamp = 0;
 var effect = null;
 var onScrollCallbacks = [];
 function setTranslate(pos0) {
-    if (pos0.x === pos.x && pos0.y === pos.y)
+    if (Utils.isSamePos(pos0, pos))
         return;
     slidingContainerInstance.setStyle({
         transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
