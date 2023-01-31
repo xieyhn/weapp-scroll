@@ -24,6 +24,9 @@ var Utils = {
             x: pos.x,
             y: pos.y
         };
+    },
+    isSamePos: function (p1, p2) {
+        return p1.x === p2.x && p1.y === p2.y;
     }
 };
 
@@ -65,6 +68,8 @@ var startTimeStamp = 0;
 var effect = null;
 var onScrollCallbacks = [];
 function setTranslate(pos0) {
+    if (Utils.isSamePos(pos0, pos))
+        return;
     slidingContainerInstance.setStyle({
         transform: 'translateX(' + pos0.x + 'px) translateY(' + pos0.y + 'px)'
     });
@@ -73,7 +78,6 @@ function setTranslate(pos0) {
     onScrollCallbacks.forEach(function (cb) { return cb({
         x: pos.x,
         y: pos.y,
-        ownerInstance: ownerInstance,
         maxScrollDistanceX: minTranslateX * -1,
         maxScrollDistanceY: minTranslateY * -1
     }); });
@@ -84,7 +88,7 @@ function moveFromTo(fromPos, toPos, duration, timing, onComplete) {
     fromPos = Utils.clonePos(fromPos);
     toPos = Utils.clonePos(toPos);
     if (duration === 0) {
-        setTranslate(fromPos);
+        setTranslate(toPos);
         ownerInstance.requestAnimationFrame(function () {
             completed = true;
             onComplete && onComplete();
@@ -132,7 +136,7 @@ function positionCorrection(pos) {
         x: Utils.clamp(minTranslateX, maxTranslateX, pos.x),
         y: Utils.clamp(minTranslateY, maxTranslateY, pos.y)
     };
-    if (correctedPos.x !== pos.x || correctedPos.y !== pos.y) {
+    if (!Utils.isSamePos(correctedPos, pos)) {
         moveFromTo(pos, correctedPos, options.bounceDuration, { x: Easing.v3, y: Easing.v3 });
     }
 }
@@ -188,16 +192,23 @@ function touchmove(event) {
     setTranslate({ x: x, y: y });
 }
 function touchend(event) {
-    if (pos.x === startPos.x && pos.y === startPos.y)
+    var minMovingDistance = 15;
+    var maxMovingDuration = 300;
+    var finalPos = { x: pos.x, y: pos.y };
+    if (Utils.isSamePos(finalPos, startPos))
         return;
     var eventDuration = event.timeStamp - startTimeStamp;
-    var finalPos = { x: pos.x, y: pos.y };
+    if (eventDuration > maxMovingDuration) {
+        positionCorrection(finalPos);
+        return;
+    }
+    var distanceX = Math.abs(finalPos.x - startPos.x);
+    var distanceY = Math.abs(finalPos.y - startPos.y);
     var durationX = 0;
     var durationY = 0;
     var timingX = Easing.v1;
     var timingY = Easing.v1;
-    var calculateMomentum = function calculateMomentum(start, end) {
-        var distance = Math.abs(start - end);
+    var calculateMomentum = function calculateMomentum(start, end, distance) {
         var speed = distance / eventDuration;
         var dir = end - start > 0 ? 1 : -1;
         var duration = Math.min(options.momentumDuration, (speed * 2) / options.deceleration);
@@ -207,8 +218,11 @@ function touchend(event) {
             delta: delta
         };
     };
-    if (canScrollX && finalPos.x === Utils.clamp(minTranslateX, maxTranslateX, finalPos.x)) {
-        var result = calculateMomentum(startPos.x, pos.x);
+    if (canScrollX
+        && distanceX > minMovingDistance
+        && finalPos.x <= maxTranslateX
+        && finalPos.x >= minTranslateX) {
+        var result = calculateMomentum(startPos.x, pos.x, distanceX);
         durationX = result.duration;
         finalPos.x += result.delta;
         if (finalPos.x > maxTranslateX || finalPos.x < minTranslateX) {
@@ -223,8 +237,11 @@ function touchend(event) {
             }
         }
     }
-    if (canScrollY && finalPos.y === Utils.clamp(minTranslateY, maxTranslateY, finalPos.y)) {
-        var result = calculateMomentum(startPos.y, pos.y);
+    if (canScrollY
+        && distanceY > minMovingDistance
+        && finalPos.y >= minTranslateY
+        && finalPos.y <= maxTranslateY) {
+        var result = calculateMomentum(startPos.y, pos.y, distanceY);
         durationY = result.duration;
         finalPos.y += result.delta;
         if (finalPos.y > maxTranslateY || finalPos.y < minTranslateY) {
