@@ -85,3 +85,7 @@ var cancel = weappScroll.onScroll(function (data) {
 // 取消监听
 cancel()
 ```
+
+## License
+
+[MIT](https://github.com/haiya6/weapp-scroll/blob/main/LICENSE)
